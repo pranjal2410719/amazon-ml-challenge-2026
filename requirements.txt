@@ -1,0 +1,7 @@
+numpy
+pandas
+scikit-learn
+xgboost
+lightgbm
+rapidfuzz
+# sagemaker  # optional, only if using SageMaker training jobs
