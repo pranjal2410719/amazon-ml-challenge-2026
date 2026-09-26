@@ -1,10 +1,10 @@
 # amazon-ml-challenge-2026
 
-A structured pipeline for the Amazon ML Challenge 2026, providing data preprocessing, blocking, feature engineering, model training, and inference in a clean, reproducible layout.
+A structured pipeline for the Amazon ML Challenge 2026 — Business Entity Resolution. Provides data preprocessing, blocking, feature engineering, model training, and inference in a clean, reproducible layout.
 
 ## Overview
 
-This repository contains a complete, reproducible entity resolution pipeline for the **Amazon ML Challenge 2026 — Business Entity Resolution Challenge**. The task is to match business records from three independent sources (S1, S2, S3) that share no common identifiers, using only the provided training data (no external lookups).
+This repository contains a complete, reproducible entity resolution pipeline for the **Amazon ML Challenge 2026**. The task is to match business records from three independent sources (S1, S2, S3) that share no common identifiers, using only the provided training data (no external lookups).
 
 ## Challenge Details
 
@@ -20,37 +20,37 @@ This repository contains a complete, reproducible entity resolution pipeline for
 ├── README.md                    ← run instructions
 ├── requirements.txt              ← pip install list
 ├── eda.py                        ← run this first, cell by cell
-├── eda_completed.ipynb           ← original notebook (kept at root)
+├── eda_completed.ipynb           ← original notebook
 ├── Documentation_template.md      ← filled-in methodology document
-├── student_resource/             ← (your existing challenge folder, dataset inside)
+├── student_resource/             ← challenge folder with dataset
 │   └── dataset/...
 └── src/                          ← source code package
-    ├── __init__.py               (empty – just makes src a package)
+    ├── __init__.py               (empty — makes src a package)
     ├── normalize.py
     ├── blocking.py
     ├── features.py
     ├── train.py
     ├── predict.py
     ├── score.py
-    └── model.py                  ← high‑level EntityResolutionModel wrapper
+    └── model.py                  ← high-level EntityResolutionModel wrapper
 ```
 
 ## How to Run
 
-1️⃣ **Setup** – Install dependencies:
+1️⃣ **Setup** — Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2️⃣ **Exploratory Data Analysis** – Run `eda.py` (it loads the Jupyter notebook cells as a script) or open `eda_completed.ipynb` in Jupyter.
+2️⃣ **Exploratory Data Analysis** — Run `eda.py` (loads the notebook cells as a script) or open `eda_completed.ipynb` in Jupyter.
 
-3️⃣ **Blocking / Candidate Generation** – Use `src.blocking.generate_candidates`.
+3️⃣ **Blocking / Candidate Generation** — Use `src.blocking.generate_candidates`.
 
-4️⃣ **Feature Engineering** – `src.features.pair_features`.
+4️⃣ **Feature Engineering** — Use `src.features.pair_features`.
 
-5️⃣ **Train Model** – `src.train.build_training_set` + `src.train.train_model`.
+5️⃣ **Train Model** — Use `src.train.build_training_set` + `src.train.train_model`.
 
-6️⃣ **Inference** – `src.predict.run_inference` – produces `output/candidate_pairs.tsv` and `output/matching_results.tsv`.
+6️⃣ **Inference** — Use `src.predict.run_inference` — produces `output/candidate_pairs.tsv` and `output/matching_results.tsv`.
 
 ## Quick Example (Python)
 
@@ -110,53 +110,3 @@ See **Documentation_template.md** for the full methodology write-up required by 
 ---
 
 *This repository follows the Amazon ML Challenge 2026 submission guidelines. No external data lookup is used — the pipeline relies solely on the provided training data.*
-
-## Project Layout
-```
-E:/6ab10eb3b23ba_student_resource/
-├── README.md                    ← run instructions
-├── requirements.txt              ← pip install list
-├── eda.py                        ← run this first, cell by cell (or open the notebook)
-├── student_resource/             ← (your existing challenge folder, dataset inside)
-│   └── dataset/...
-└── src/                          ← source code
-    ├── __init__.py               (empty – just makes src a package)
-    ├── normalize.py
-    ├── blocking.py
-    ├── features.py
-    ├── train.py
-    ├── predict.py
-    └── score.py
-```
-
-## How to Run
-1️⃣ **Setup** – Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-2️⃣ **Exploratory Data Analysis** – Run `eda.py` (it loads the Jupyter notebook cells as a script) or open `eda_completed.ipynb` in Jupyter.
-3️⃣ **Blocking / Candidate Generation** – Use `src.blocking.generate_candidates`.
-4️⃣ **Feature Engineering** – `src.features.pair_features`.
-5️⃣ **Train Model** – `src.train.build_training_set` + `src.train.train_model`.
-6️⃣ **Inference** – `src.predict.run_inference` – produces `output/candidate_pairs.tsv` and `output/matching_results.tsv`.
-
-## Quick Example (Python)
-```python
-import pandas as pd
-from src.blocking import generate_candidates
-from src.train import build_training_set, train_model, save_model
-from src.predict import run_inference
-
-# Load data
-s1 = pd.read_csv('student_resource/dataset/train_source1.tsv', sep='\t')
-# ... similarly load s2, s3, ground truth
-
-candidates = generate_candidates(s1, s2, s3)
-X, y, name_tfidf, addr_tfidf = build_training_set(s1, s2, s3, ground_truth, candidates)
-model = train_model(X, y)
-save_model(model, 'model.txt')
-run_inference(s1_test, s2_test, s3_test, model)
-```
-
----
-*The repository already contains a robust pipeline; this README mirrors the required structure for the challenge.*

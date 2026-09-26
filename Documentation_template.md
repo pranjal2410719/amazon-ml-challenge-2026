@@ -1,7 +1,7 @@
 # Amazon ML Challenge 2026 — Documentation Template
 
-**Team Name:** <Your Team Name>
-**Team Members:** <Names, Roles>
+**Team Name:** Pranjal Yadav
+**Team Members:** Pranjal Yadav (pranjal2410719)
 
 ---
 
