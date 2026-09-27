@@ -179,15 +179,27 @@ def generate_candidates(source1_df, source2_df, source3_df,
     # duplicate groups tie on name similarity -- address is what actually
     # separates the correct branch from the wrong one (EDA: zero
     # name+country+address collisions in Source 1).
-    s1_lookup = source1_df.set_index(id_col)[[name_col, address_col]].to_dict("index")
-    s2_lookup = source2_df.set_index(id_col)[[name_col, address_col]].to_dict("index")
-    s3_lookup = source3_df.set_index(id_col)[[name_col, address_col]].to_dict("index")
+    #
+    # Token sets are computed ONCE per record up front and cached, rather
+    # than recomputed on every (S1, candidate) comparison -- large
+    # duplicate-name groups (up to 250+, per EDA) mean the same S2/S3
+    # record can be a candidate for many S1 entities, so uncached
+    # recomputation was a major, unnecessary slowdown.
+    def _precompute_tokens(df):
+        return {
+            row.entity_id: (name_tokens(getattr(row, name_col)), address_tokens(getattr(row, address_col)))
+            for row in df.itertuples()
+        }
 
-    def resolve(eid):
+    s1_tok = _precompute_tokens(source1_df)
+    s2_tok = _precompute_tokens(source2_df)
+    s3_tok = _precompute_tokens(source3_df)
+
+    def resolve_tokens(eid):
         if eid.startswith("S2-"):
-            return s2_lookup.get(eid)
+            return s2_tok.get(eid)
         if eid.startswith("S3-"):
-            return s3_lookup.get(eid)
+            return s3_tok.get(eid)
         return None
 
     candidates = {}
@@ -196,17 +208,16 @@ def generate_candidates(source1_df, source2_df, source3_df,
         if not cand_ids:
             candidates[eid] = []
             continue
-        s1_rec = s1_lookup.get(eid)
-        s1_name_set = name_tokens(s1_rec[name_col]) if s1_rec else set()
-        s1_addr_set = address_tokens(s1_rec[address_col]) if s1_rec else set()
+        s1_name_set, s1_addr_set = s1_tok.get(eid, (set(), set()))
 
         scored = []
         for cid in cand_ids:
-            crec = resolve(cid)
-            if crec is None:
+            ctok = resolve_tokens(cid)
+            if ctok is None:
                 continue
-            name_sim = _jaccard(s1_name_set, name_tokens(crec[name_col]))
-            addr_sim = _jaccard(s1_addr_set, address_tokens(crec[address_col]))
+            cname_set, caddr_set = ctok
+            name_sim = _jaccard(s1_name_set, cname_set)
+            addr_sim = _jaccard(s1_addr_set, caddr_set)
             combined_score = 0.5 * name_sim + 0.5 * addr_sim
             scored.append((cid, combined_score))
         scored.sort(key=lambda x: x[1], reverse=True)

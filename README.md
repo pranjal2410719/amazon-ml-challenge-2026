@@ -21,13 +21,23 @@ This repository contains a complete, reproducible entity resolution pipeline for
 ├── requirements.txt              ← pip install list
 ├── eda.py                        ← run this first, cell by cell
 ├── eda_completed.ipynb           ← original notebook
+├── run_pipeline.py               ← FULL END-TO-END PIPELINE (blocking → train → tune → infer → validate)
 ├── Documentation_template.md      ← filled-in methodology document
 ├── student_resource/             ← challenge folder with dataset
-│   └── dataset/...
+│   └── dataset/
+│       ├── train/
+│       │   ├── train_source1.tsv
+│       │   ├── train_source2.tsv
+│       │   ├── train_source3.tsv
+│       │   └── train_ground_truth.tsv
+│       └── test/
+│           ├── test_source1.tsv
+│           ├── test_source2.tsv
+│           └── test_source3.tsv
 └── src/                          ← source code package
     ├── __init__.py               (empty — makes src a package)
     ├── normalize.py
-    ├── blocking.py
+    ├── blocking.py               ← Sorted Neighborhood Method with token precomputation fix
     ├── features.py
     ├── train.py
     ├── predict.py
@@ -35,24 +45,28 @@ This repository contains a complete, reproducible entity resolution pipeline for
     └── model.py                  ← high-level EntityResolutionModel wrapper
 ```
 
-## How to Run
+## Quick Start (Full Pipeline)
 
-1️⃣ **Setup** — Install dependencies:
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
+
+# 2. Place your dataset in student_resource/dataset/ (train/ and test/ subfolders)
+
+# 3. Run the full pipeline end-to-end
+python run_pipeline.py
 ```
 
-2️⃣ **Exploratory Data Analysis** — Run `eda.py` (loads the notebook cells as a script) or open `eda_completed.ipynb` in Jupyter.
+This executes:
+1. **Load data** → train + test splits
+2. **Validation split** (15% of train_source1 held out)
+3. **Blocking** on train/validation splits → quality report (recall ceiling, avg candidates)
+4. **Train LightGBM matcher** on train split (hard negatives from blocking)
+5. **Tune threshold** on validation split (sweeps 0.3–0.8, maximizes macro F_0.5)
+6. **Full inference on test set** → writes `output/matching_results.tsv` & `output/candidate_pairs.tsv`
+7. **Validate output format** using `utils/validate_submission.py`
 
-3️⃣ **Blocking / Candidate Generation** — Use `src.blocking.generate_candidates`.
-
-4️⃣ **Feature Engineering** — Use `src.features.pair_features`.
-
-5️⃣ **Train Model** — Use `src.train.build_training_set` + `src.train.train_model`.
-
-6️⃣ **Inference** — Use `src.predict.run_inference` — produces `output/candidate_pairs.tsv` and `output/matching_results.tsv`.
-
-## Quick Example (Python)
+## Manual Usage (Python)
 
 ```python
 import pandas as pd
@@ -61,14 +75,27 @@ from src.train import build_training_set, train_model, save_model
 from src.predict import run_inference
 
 # Load data
-s1 = pd.read_csv('student_resource/dataset/train_source1.tsv', sep='\t')
-# ... similarly load s2, s3, ground truth
+s1 = pd.read_csv('student_resource/dataset/train/train_source1.tsv', sep='\t')
+s2 = pd.read_csv('student_resource/dataset/train/train_source2.tsv', sep='\t')
+s3 = pd.read_csv('student_resource/dataset/train/train_source3.tsv', sep='\t')
+gt_df = pd.read_csv('student_resource/dataset/train/train_ground_truth.tsv', sep='\t')
+ground_truth = {row.source1_entity_id: [x for x in row.matched_entity_ids.split(",") if x] for row in gt_df.itertuples()}
 
-candidates = generate_candidates(s1, s2, s3)
+# Blocking
+candidates = generate_candidates(s1, s2, s3, window=15, max_candidates=20)
+
+# Training
 X, y, name_tfidf, addr_tfidf = build_training_set(s1, s2, s3, ground_truth, candidates)
 model = train_model(X, y)
-save_model(model, 'model.txt')
-run_inference(s1_test, s2_test, s3_test, model)
+save_model(model, 'output/model.txt')
+
+# Inference on test
+test_s1 = pd.read_csv('student_resource/dataset/test/test_source1.tsv', sep='\t')
+test_s2 = pd.read_csv('student_resource/dataset/test/test_source2.tsv', sep='\t')
+test_s3 = pd.read_csv('student_resource/dataset/test/test_source3.tsv', sep='\t')
+run_inference(test_s1, test_s2, test_s3, model, threshold=0.5,
+              candidate_out='output/candidate_pairs.tsv',
+              matching_out='output/matching_results.tsv')
 ```
 
 ## High-Level Wrapper
@@ -90,13 +117,11 @@ matches, candidates = model.infer(
 
 ## Validation
 
-Validate your submission files before uploading:
-
 ```bash
 python3 utils/validate_submission.py \
   --matching output/matching_results.tsv \
   --candidate output/candidate_pairs.tsv \
-  --test-dir dataset/test
+  --test-dir student_resource/dataset/test
 ```
 
 ## Documentation
@@ -104,7 +129,7 @@ python3 utils/validate_submission.py \
 See **Documentation_template.md** for the full methodology write-up required by the challenge, including:
 - Candidate generation / blocking strategy
 - Model architecture and feature engineering
-- Experiments and results
+- Experiments and results (with real numbers once pipeline runs)
 - Reproduction instructions
 
 ---
